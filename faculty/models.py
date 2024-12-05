@@ -19,5 +19,25 @@ class FacultyInfo(BaseModel):
     class Meta:
         db_table = "faculty_info"
 
-class ExamSchedule(BaseModel):
+class ExamSchedules(BaseModel):
+    EXAM_HELD_STATUS = {
+        "1": "held",
+        "2": "pending",
+    }
+    course = models.ForeignKey("portal.Dropdowns", on_delete= models.SET_NULL, related_name= "scheduled_course", null= True)
+    department = models.ForeignKey("portal.Dropdowns", on_delete= models.SET_NULL, related_name= "scheduled_department", null= True)
+    year = models.ForeignKey("portal.Dropdowns", on_delete= models.SET_NULL, related_name= "scheduled_year", null= True)
+    examination_type = models.ForeignKey("portal.Dropdowns", on_delete= models.SET_NULL, related_name= "exam_type", null= True)
+    subject = models.ForeignKey("portal.Dropdowns", on_delete= models.SET_NULL, related_name= "scheduled_subject", null= True)
+    exam_date = models.DateField()
+    start_time = models.TimeField()
+    end_time = models.TimeField()
+    exam_status = models.CharField(max_length= 2, choices= EXAM_HELD_STATUS)
+
+    objects = models.Manager()
+
+    class Meta:
+        db_table = "exam_schedules"
+
+class QuestionPaper(BaseModel):
     pass

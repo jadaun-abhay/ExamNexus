@@ -51,19 +51,38 @@ def index(request):
         return JsonResponse(res, status= 405)
 
 def dashboard(request):
-    flag = check_role(request.user, ["admin"])
+    available_roles_list = list(Roles.objects.all().values_list("role", flat=True).exclude(status="3"))
+    flag = check_role(request.user, available_roles_list)
     if isinstance(flag, dict):
         return JsonResponse(flag["res"], status= flag["status"])
-    courses = employees = students = 0
-    course_base_instance = Dropdowns.objects.filter(value= "courses").exclude(status= "3").first()
-    if not course_base_instance:
-        courses = 0
-    else:
-        courses = len(course_base_instance.child.all().values_list("value", flat= True).exclude(status= "3"))
-    employees = len(User.objects.all().exclude(status= "3").exclude(roles__role__in= ['admin', 'student']))
-    students = len(User.objects.all().filter(roles__role= "student").exclude(status= "3"))
-    res = {"message": "success", "roles": list(request.user.roles.all().exclude(status= "3").values_list("role")), "data": [{"courses": courses, "employees": employees, "students": students}]}
-    return JsonResponse(res, status= 200)
+    if not request.method == "GET":
+        res = {"message": "Invalid request method"}
+        return JsonResponse(res, status= 405)
+    user_roles = list(request.user.roles.all().exclude(status= "3").values_list("role", flat= True))
+    if "admin" in user_roles:
+        course_base_instance = Dropdowns.objects.filter(value= "courses").exclude(status= "3").first()
+        if not course_base_instance:
+            courses = 0
+        else:
+            courses = len(course_base_instance.child.all().values_list("value", flat= True).exclude(status= "3"))
+        employees = len(User.objects.all().exclude(status= "3").exclude(roles__role__in= ['admin', 'student']))
+        students = len(User.objects.all().filter(roles__role= "student").exclude(status= "3"))
+        res = {"message": "success", "roles": list(request.user.roles.all().exclude(status= "3").values_list("role")), "data": [{"courses": courses, "employees": employees, "students": students}]}
+        return JsonResponse(res, status= 200)
+    elif "coe" in user_roles:
+        course_base_instance = Dropdowns.objects.filter(value="courses").exclude(status="3").first()
+        if not course_base_instance:
+            courses = 0
+        else:
+            courses = len(course_base_instance.child.all().values_list("value", flat=True).exclude(status="3"))
+        students = len(User.objects.all().filter(roles__role="student").exclude(status="3"))
+        res = {"message": "success", "roles": list(request.user.roles.all().exclude(status="3").values_list("role")),
+               "data": [{"courses": courses, "students": students}]}
+        return JsonResponse(res, status=200)
+    elif "faculty" in user_roles:
+
+        res = {"message": "success"}
+        return JsonResponse(res, status= 200)
 
 def login_user(request):
     if request.method == "POST":
@@ -87,7 +106,7 @@ def login_user(request):
         if user_instance:
             login(request, user_instance)
             roles_list = list(request.user.roles.all().values_list("role", flat= True).exclude(status= "3"))
-            res = {"message": "success", "roles": roles_list}
+            res = {"message": "Login is successful !!!", "roles": roles_list}
             return JsonResponse(res, status= 200)
         else:
             res = {"message": "Incorrect password"}
@@ -95,7 +114,7 @@ def login_user(request):
     elif request.method == "GET":
         if request.user.is_authenticated:
             roles = list(request.user.roles.all().values_list("role", flat=True))
-            res = {"message": "Login successful !!!", "roles": roles}
+            res = {"message": "Login is successful !!!", "roles": roles}
             return JsonResponse(res, status=200)
         else:
             res = {"message": "Login is required !!!"}
@@ -118,7 +137,7 @@ def logout_user(request):
         return JsonResponse(res, status= 405)
 
 def dropdowns(request):
-    flag = check_role(request.user, ["admin"])
+    flag = check_role(request.user, ["admin", "coe"])
     if isinstance(flag, dict):
         return JsonResponse(flag["res"], status= flag["status"])
     if request.method == "POST":
@@ -218,7 +237,7 @@ def dropdowns(request):
         return JsonResponse(res, status= 409)
 
 def get_courses_list(request):
-    flag = check_role(request.user, ["admin"])
+    flag = check_role(request.user, ["admin", "coe"])
     if isinstance(flag, dict):
         return JsonResponse(flag["res"], status= flag["status"])
     if request.method == "GET":
@@ -248,6 +267,16 @@ def get_genders_list(request):
         gender_list = list(Dropdowns.objects.filter(value= "gender", parent=None)[0].child.values("id", "value"))
         res = {"message": "success", "data": gender_list}
         return JsonResponse(res, status= 200)
+    elif request.method == "POST":
+        data = json.loads(request.body)
+        new_gender = data.get("gender")
+        parent = Dropdowns.objects.filter(value= "gender").exclude(status= "3").first()
+        if parent.child.filter(value= new_gender).exclude(status= "3"):
+            res = {"message": "Already exists"}
+            return JsonResponse(res, status= 409)
+        parent.child.create(value= new_gender, status= "1")
+        res = {"message": "Gender is added successfully"}
+        return JsonResponse(res, status= 201)
     else:
         res = {"message": "Invalid request method"}
         return JsonResponse(res, status= 405)
@@ -459,3 +488,35 @@ def records(request):
     else:
         res = {"message": "Invalid request method"}
         return JsonResponse(res, status= 200)
+
+def examination_types(request):
+    flag = check_role(request.user,  ["admin", "coe"])
+    if isinstance(flag, dict):
+        return JsonResponse(flag["res"], status= flag["status"])
+    if request.method == "GET":
+        examinations = Dropdowns.objects.filter(parent__value= "exam_type").all().exclude(status= "3").values("id", "parent_id", "value")
+        examinations = list(examinations)
+        res = {"message": "success", "data": examinations}
+        return JsonResponse(res, status= 200)
+    elif request.method == "POST":
+        data = json.loads(request.body)
+        exam_name = data.get("exam_name")
+        exam_duration = data.get("exam_duration")
+        maximum_marks = data.get("maximum_marks")
+        if not (exam_name and exam_duration and maximum_marks):
+            res = {"message": "Information given is not sufficient"}
+            return JsonResponse(res, status= 400)
+        parent = Dropdowns.objects.filter(value= "exam_type").exclude(status= "3").first()
+        if not parent:
+            parent = Dropdowns.objects.create(value= "exam_type", status= "1")
+        if parent.child.filter(value= exam_name).exclude(status= "3").exists():
+            res = {"message": "Already exists"}
+            return JsonResponse(res, status= 409)
+        exam_type = parent.child.create(value= exam_name, status= "1")
+        exam_type.child.create(value= exam_duration, status= "1")
+        exam_type.child.create(value= maximum_marks, status= "1")
+        res = {"message": "Examination type is successfully added"}
+        return JsonResponse(res, status= 201)
+    else:
+        res = {"message": "Invalid request method"}
+        return JsonResponse(res, status= 405)

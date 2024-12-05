@@ -12,4 +12,5 @@ urlpatterns = [
     path("get-genders/", views.get_genders_list),
     path("records/", views.records),
     path("dashboard/", views.dashboard),
+    path("exam-types/", views.examination_types),
 ]

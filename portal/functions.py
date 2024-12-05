@@ -54,8 +54,6 @@ def get_year_instance(course_id, department_id, year_id):
     if isinstance(course_instance, dict):
         return course_instance
     department_instance = get_department_instance(course_id, department_id)
-    print(year_id)
-    print(department_instance.child.filter(id= year_id))
     if isinstance(department_instance, dict):
         return department_instance
     year_instance = department_instance.child.filter(id= year_id).exclude(status= "3").first()
@@ -79,6 +77,17 @@ def get_section_instance(course_id,department_id, year_id, section_id):
         response = {"res": {"message": f"section with id= {section_id} is not defined for {course_instance.value} {department_instance.value} year-{year_instance.value}"}, "status": 404}
         return response
     return section_instance
+
+def get_subject_instance(course_id, department_id, year_id, subject_id):
+    year_instance = get_year_instance(course_id, department_id, year_id)
+    if isinstance(year_instance, dict):
+        return year_instance
+    subject = Dropdowns.objects.filter(parent__value= "subjects", id= subject_id).first()
+    if not subject:
+        response = {"res": {"message": f"Subject does not exists in given course-department-year"}, "status": 404}
+        return response
+    else:
+        return subject
 
 def create_faculty_info_details(course_id, department_id, detail, faculty_id):
     course_instance = get_course_instance(course_id)
