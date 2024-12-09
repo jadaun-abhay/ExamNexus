@@ -3,13 +3,13 @@ import json
 import re
 
 from django.http import JsonResponse
-from django.shortcuts import render
 
 from faculty.functions import check_schedule
-from faculty.models import ExamSchedules
+from faculty.models import ExamSchedules, FacultyInfo, QuestionPaper
 from portal.functions import check_role, get_course_instance, get_department_instance, get_year_instance, \
     get_subject_instance
 from portal.models import Dropdowns
+from portal.views import examination_types
 
 
 # Create your views here.
@@ -19,78 +19,8 @@ def index(request):
     return JsonResponse(res, status=200)
 
 
-# def schedule(request):
-#     flag = check_role(request.user, ["coe"])
-#     if isinstance(flag, dict):
-#         return JsonResponse(flag["res"], status=flag["status"])
-#     if request.method == "POST":
-#         data = json.loads(request.body)
-#         course_id = data.get("course_id")
-#         department_id = data.get("department_id")
-#         year_id = data.get("year_id")
-#         exam_type_id = data.get("exam_type_id")
-#         exam_details = data.get("exam_details")
-#         if not course_id and department_id and year_id and exam_type_id and exam_details:
-#             res = {"message": "Information given is not sufficient"}
-#             return JsonResponse(res, status= 400)
-#         exam_type = Dropdowns.objects.filter(parent__value="exam_type", id=exam_type_id).first()
-#         course_instance = get_course_instance(course_id)
-#         if isinstance(course_instance, dict):
-#             return JsonResponse(course_instance["res"], status=course_instance["status"])
-#         department_instance = get_department_instance(course_id, department_id)
-#         if isinstance(department_instance, dict):
-#             return JsonResponse(department_instance["res"], status=department_instance["status"])
-#         year_instance = get_year_instance(course_id, department_id, year_id)
-#         if isinstance(year_instance, dict):
-#             return JsonResponse(year_instance["res"], year_instance["status"])
-#         college_start_time = datetime.time(9, 0, 0)
-#         college_end_time = datetime.time(17, 0, 0)
-#         for detail in exam_details:
-#             exam_date = detail.get("exam_date")
-#             if not bool(re.match(r"^\d{2}/\d{2}/\d{4}$", exam_date)):
-#                 res = {"message": "format for exam_date is invalid. Required format: \'dd/mm/yyyy\'"}
-#                 return JsonResponse(res, status= 400)
-#             exam_date = datetime.datetime.strptime(exam_date, "%d/%m/%Y")
-#             subject_id = detail.get("subject_id")
-#             start_time = detail.get("start_time")
-#             start_time = datetime.datetime.strptime(start_time, "%H:%M:%S").time()
-#             end_time = detail.get("end_time")
-#             end_time = datetime.datetime.strptime(end_time, "%H:%M:%S").time()
-#             subject_instance = Dropdowns.objects.filter(parent__value="subjects", id=subject_id)
-#             exams = ExamSchedules.objects.filter(exam_status="2", course=course_instance,
-#                                                  department=department_instance, year=year_instance).exclude(
-#                 status="3").order_by("exam_date")
-#             if not (college_start_time < start_time < college_end_time):
-#                 res = {"message": "Examination can only be conducted in the academic hours"}
-#                 return JsonResponse(res, status= 400)
-#             for exam in exams:
-#                 examination_type = exam.examination_type.value
-#                 subject = exam.subject.value
-#                 scheduled_date = exam.exam_date
-#                 if exam_type.value != examination_type:
-#                     difference = exams.last().exam_date + datetime.timedelta(weeks=4)
-#                     if not exam_date >= difference:
-#                         res = {"message": f"Can not schedule {exam_type.value} close to {examination_type}"}
-#                         return JsonResponse(res, status=400)
-#                 if exam.subject == subject:
-#                     res = {"message": "You are scheduling examination of a subject which already exists and is pending"}
-#                     return JsonResponse(res, status=400)
-#                 if exam.start_time <= start_time <= exam.end_time:
-#                     res = {"message": "Scheduling of exam in a scheduled slot is not possible"}
-#                     return JsonResponse(res, status=400)
-#             ExamSchedules.objects.create(status="1", exam_status="2", course=course_instance,
-#                                          department=department_instance, year= year_instance, examination_type= exam_type,
-#                                          exam_date= exam_date, subject= subject_instance.first(), start_time= start_time, end_time= end_time)
-#         res = {"message": "Schedule is added successfully"}
-#         return JsonResponse(res, status= 200)
-#     if request.method == "GET":
-#         pass
-#     else:
-#         res = {"message": "Invalid request method"}
-#         return JsonResponse(res, status= 405)
-
-def schedule(request):
-    flag = check_role(request.user, ["coe", "admin"])
+def examination_schedule(request):
+    flag = check_role(request.user, ["coe", "admin", "hod"])
     if isinstance(flag, dict):
         return JsonResponse(flag["res"], status=flag["status"])
     if request.method == "POST":
@@ -98,15 +28,15 @@ def schedule(request):
         course_id = data.get("course_id")
         department_id = data.get("department_id")
         year_id = data.get("year_id")
-        exam_type = data.get("exam_type_id")
+        exam_name_id = data.get("exam_name_id")
         exam_details = data.get("exam_details")
-        if not (course_id and department_id and year_id and exam_type and exam_details):
+        if not (course_id and department_id and year_id and exam_name_id and exam_details):
             res = {"message": "Information given is not sufficient"}
             return JsonResponse(res, status= 400)
-        exam_type = Dropdowns.objects.filter(parent__value="exam_type", id=exam_type).exclude(status="3").first()
-        if not exam_type:
-            res = {"message": "Exam type is not defined"}
-            return JsonResponse(res, status= 400)
+        exam_name = Dropdowns.objects.filter(parent__value= "exam_name", id=  exam_name_id).exclude(status= "3").first()
+        if not exam_name:
+            res = {"message": "Exam name is not defined"}
+            return JsonResponse(res, status=400)
         course_instance = get_course_instance(course_id)
         if isinstance(course_instance, dict):
             return JsonResponse(course_instance["res"], status=course_instance["status"])
@@ -116,25 +46,203 @@ def schedule(request):
         year_instance = get_year_instance(course_id, department_id, year_id)
         if isinstance(year_instance, dict):
             return JsonResponse(year_instance["res"], status=year_instance["status"])
-        flag = check_schedule(course_instance, department_instance, year_instance, exam_type, exam_details)
+        flag = check_schedule(course_instance, department_instance, year_instance, exam_name, exam_details)
         if isinstance(flag, dict):
             return JsonResponse(flag["res"], status=flag["status"])
         zero_time = datetime.datetime.min
-        print("HELLO", type(flag + zero_time), (flag+zero_time).time().strftime("%H:%M:%S"))
-        flag = (flag+zero_time).time().strftime("%H:%M:%S")
-        # print("HeLLO", type(zero_time + flag))
+        flag = (flag + zero_time).time().strftime("%H:%M:%S")
         for detail in exam_details:
             subject_id = detail.get("subject_id")
             subject_instance = get_subject_instance(course_id, department_id, year_id, subject_id)
             exam_date = detail.get("exam_date")
             exam_date = datetime.datetime.strptime(exam_date, "%d/%m/%Y")
             exam = ExamSchedules.objects.create(status="1", course=course_instance, department=department_instance,
-                                                year=year_instance, examination_type=exam_type,
-                                                subject=subject_instance, exam_date= exam_date,
-                                                start_time=detail.get("start_time"), end_time= flag,
+                                                year=year_instance, examination_type=exam_name,
+                                                subject=subject_instance, exam_date=exam_date,
+                                                start_time=detail.get("start_time"), end_time=flag,
                                                 exam_status="2")
         res = {"message": "success", "data": "Schedule has been added"}
         return JsonResponse(res, status=201)
+    elif request.method == "GET":
+        exam_name_id = request.GET.get("exam_id")
+        course_id = request.GET.get("course_id")
+        department_id = request.GET.get("department_id")
+        year_id = request.GET.get("year_id")
+        if not (exam_name_id and course_id and department_id and year_id):
+            res = {"message": "Information given is not sufficient"}
+            return JsonResponse(res, status=400)
+        date_sheet = ExamSchedules.objects.filter(course_id= course_id, department_id= department_id, year_id= year_id,
+                                                  examination_type_id= exam_name_id, exam_status= "2")
+        if not date_sheet.exists():
+            res = {"message": "No schedule found"}
+            return JsonResponse(res, status=404)
+        data = list()
+        for date_data in date_sheet:
+            schedule_id = date_data.id
+            exam_date = date_data.exam_date
+            start_time = date_data.start_time
+            end_time = date_data.end_time
+            department = date_data.department.value
+            year = date_data.year.value
+            my_dict = {"date": exam_date, "start_time": start_time, "end_time": end_time,
+                       "subject": date_data.subject.value, "department": department, "year": year, "schedule_id": schedule_id}
+            data.append(my_dict)
+        res = {"message": "success", "data": data}
+        return JsonResponse(res, status=200)
     else:
         res = {"message": "Invalid request method"}
-        return JsonResponse(res, status= 405)
+        return JsonResponse(res, status=405)
+
+
+def get_my_schedule(request):
+    flag = check_role(request.user, ["faculty"])
+    if isinstance(flag, dict):
+        return JsonResponse(flag["res"], status=flag["status"])
+    if not request.method == "GET":
+        res = {"message": "Invalid request method"}
+        return JsonResponse(res, status=405)
+    faculty_info = FacultyInfo.objects.filter(faculty=request.user)
+    data = list()
+    for each in faculty_info:
+        course_instance = each.course
+        department_instance = each.department
+        year_instance = each.year
+        subject_instance = each.subject
+        exams = ExamSchedules.objects.filter(course=course_instance, department=department_instance, year=year_instance,
+                                            subject=subject_instance, exam_status="2").exclude(status="3")
+        if exams.exists():
+            for exam in exams:
+                # exam = exam.first()
+                schedule_id = exam.id
+                ques_data = QuestionPaper.objects.filter(schedule_id= schedule_id, faculty=request.user).exclude(
+                    status="3")
+                if ques_data.exists():
+                    continue
+                exam_name_id = exam.examination_type.id
+                exam_name_instance = exam.examination_type
+                exam_details = exam_name_instance.child.all()
+                duration = exam_details[0].value
+                maximum_marks = exam_details[1].value
+                total_questions = exam_details[2].value
+                exam_name = exam.examination_type.value
+                exam_date = exam.exam_date
+                start_time = exam.start_time
+                end_time = exam.end_time
+                year_id = exam.year.id
+                year = exam.year.value
+                subject_id = exam.subject.id
+                subject_name = exam.subject.value
+                detail = dict(schedule_id=schedule_id, duration=duration, maximum_marks=maximum_marks,
+                              total_questions=total_questions, exam_name_id=exam_name_id, exam_name=exam_name,
+                              year_id=year_id, year=year,
+                              exam_date=exam_date, start_time=start_time, end_time=end_time, subject_id=subject_id,
+                              subject_name=subject_name)
+                data.append(detail)
+        else:
+            res = {"message": "success", "data": []}
+            return JsonResponse(res, status=200)
+    res = {"message": "success", "data": data}
+    return JsonResponse(res, status=200)
+
+
+def question_paper(request):
+    if request.method == "POST":
+        flag = check_role(request.user, ["faculty"])
+        if isinstance(flag, dict):
+            return JsonResponse(flag["res"], flag["status"])
+        data = json.loads(request.body)
+        schedule_id = data.get("schedule_id")
+        subject_id = data.get("subject_id")
+        year_id = data.get("year_id")
+        questions = data.get("questions")
+        if not isinstance(questions, list):
+            res = {'message': "questions must come in list"}
+            return JsonResponse(res, status=400)
+        if not (schedule_id and subject_id and year_id and questions):
+            res = {"message": "Information given is not sufficient"}
+            return JsonResponse(res, status=400)
+        subject_instance = Dropdowns.objects.filter(parent__value="subjects", id=subject_id).exclude(status="3")
+        if subject_instance.exists():
+            subject_instance = subject_instance.exists()
+        else:
+            res = {"message": f"Subject not found by id= {subject_id}"}
+            return JsonResponse(res, status=400)
+        schedule_instance = ExamSchedules.objects.filter(id= schedule_id).first()
+        year_instance = Dropdowns.objects.filter(child__value= "subjects", id=year_id).exclude(status= "3")
+        course_instance = schedule_instance.course
+        department_instance = schedule_instance.department
+        paper = QuestionPaper.objects.filter(schedule= schedule_instance, faculty= request.user).exclude(status="3")
+        if paper.exists():
+            res = {"message": "Paper has already been created"}
+            return JsonResponse(res, status=409)
+        i = 0
+        for ques_ans_dict in questions:
+            question = ques_ans_dict.get("questionText")
+            options = ques_ans_dict.get("options")
+            answer = ques_ans_dict.get("correctAnswer")
+            question_instance = QuestionPaper.objects.filter(value= question, faculty= request.user,
+                                                             schedule= schedule_instance).exclude(status="3").exclude(
+                schedule__exam_status="2")
+            i += 1
+            if question_instance.exists():
+                res = {"message": f"Question {i} already exists"}
+                
+                return JsonResponse(res, status=409)
+            ques = QuestionPaper.objects.create(value= question, faculty= request.user, status= "1",
+                                                schedule= schedule_instance)
+            for option in options:
+                option = ques.child.create(value=option, status="1")
+            correct = ques.child.create(value="answer", status="1")
+            correct.child.create(value=answer, status="1")
+        res = {"message": "success", "data": "Question paper is succesffully created and submitted for acceptance by hod"}
+        return JsonResponse(res, status=200)
+    elif request.method == "GET":
+        schedule_id = request.GET.get("schedule_id")
+        flag = check_role(request.user, ["hod"])
+        if isinstance(flag, dict):
+            return JsonResponse(flag["res"], status=flag["status"])
+        hod_info = FacultyInfo.objects.filter(faculty= request.user)
+        hod_info = hod_info.first()
+        department = hod_info.department
+        schedule_instance = ExamSchedules.objects.filter(id= schedule_id).exclude(status= "3").exclude(exam_status= "1").first()
+        if not schedule_instance:
+            res = {"message": "Exam schedule does not exists"}
+            return JsonResponse(res, status= 400)
+        subject_instance = schedule_instance.subject
+        course_instance = schedule_instance.course
+        department_instance = schedule_instance.department
+        year_instance = schedule_instance.year
+        faculties = FacultyInfo.objects.filter(course= course_instance, department= department_instance, year= year_instance, subject= subject_instance).exclude(status= "3")
+        faculty_paper_data = list()
+        fac_details = []
+        for faculty in faculties:
+            faculty_instance = faculty.faculty
+            faculty_id = faculty_instance.id
+            questions = QuestionPaper.objects.filter(schedule= schedule_instance, faculty= faculty_instance).exclude(selection_status= True)
+            i = 0
+            each_question_data = dict()
+            faculty_paper_data = list()
+            for question in questions:
+                question_text = question.value
+                options = list(question.child.values_list("value", flat= True).exclude(value= "answer"))
+                answer_instance = question.child.filter(value= "answer").first()
+                if not answer_instance:
+                    res = {"message": "Answer is not provided"}
+                    return JsonResponse(res, status= 404)
+                answer = answer_instance.child.first().value
+                i += 1
+                each_question_data = {"question": f"{i}", "question_text": question_text, "options": options, "answer": answer}
+                faculty_paper_data.append(each_question_data)
+            faculty_name = faculty_instance.get_full_name()
+            fdict = {"faculty_id": faculty_id, "faculty_name": faculty_name, "question_paper": faculty_paper_data}
+            fac_details.append(fdict)
+        res = {"message": "success", "data": fac_details}
+        return JsonResponse(res, status= 200)
+
+def choose_paper(request):
+    flag = check_role(request.user, ["hod"])
+    if isinstance(flag, dict):
+        return JsonResponse(flag["res"], status=flag["status"])
+    if request.method == "GET":
+        pass
+    # if request.method == "POST":

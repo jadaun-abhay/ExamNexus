@@ -140,10 +140,10 @@ def get_faculty_info(faculty_info):
     detail = list()
     for year_dict in years_list:
         section_list = list(faculty_info.filter(year= year_dict.get("year_id")).values_list("section__value", flat= True))
-        subject = faculty_info.values_list("subject__value", flat= True).distinct()
+        subject = faculty_info.filter(year= year_dict.get("year_id")).values_list("subject__value", flat= True).distinct()
         detail_dict = {"year": year_dict.get("year__value"), "section_list": section_list, "subject": subject[0]}
         detail.append(detail_dict)
         my_dict = {"course": course, "department": department, "detail": detail}
         if len(roles) > 1:
             my_dict["roles"] = roles
-        return my_dict
+    return my_dict

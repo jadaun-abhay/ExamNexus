@@ -1,5 +1,6 @@
 from django.contrib.auth.models import UserManager, AbstractUser
 from django.db import models
+from django.utils.translation import gettext_lazy as _
 
 # Create your models here.
 
@@ -21,15 +22,11 @@ class Dropdowns(BaseModel):
     value = models.TextField()
     parent = models.ForeignKey("self", on_delete= models.SET_NULL, null= True, related_name= "child")
 
-    objects = models.Manager()
-
     class Meta:
         db_table = "dropdowns"
 
 class Roles(BaseModel):
     role = models.TextField()
-
-    objects = models.Manager()
 
     class Meta:
         db_table = "roles"
@@ -58,8 +55,8 @@ class User(AbstractUser, BaseModel):
     middle_name = models.CharField(max_length= 30, null= True, blank= True)
     phone_number = models.CharField(max_length= 10)
     dob = models.DateField()
-    gender = models.ForeignKey("Dropdowns", on_delete= models.SET_NULL, null= True, related_name= "gender")
-    roles = models.ManyToManyField("Roles", through= "RoleMapping")
+    gender = models.ForeignKey(Dropdowns, on_delete= models.SET_NULL, null= True, related_name= "gender")
+    roles = models.ManyToManyField(Roles, through= "RoleMapping")
 
     USERNAME_FIELD = "email"
     REQUIRED_FIELDS = []
@@ -81,23 +78,19 @@ class User(AbstractUser, BaseModel):
         db_table = "portal_users"
 
 class RoleMapping(BaseModel):
-    user = models.ForeignKey("User", on_delete= models.SET_NULL, null= True)
-    role = models.ForeignKey("Roles", on_delete= models.SET_NULL, null= True)
-
-    objects = models.Manager()
+    user = models.ForeignKey(User, on_delete= models.SET_NULL, null= True)
+    role = models.ForeignKey(Roles, on_delete= models.SET_NULL, null= True)
 
     class Meta:
         db_table = "role_mapping"
 
 class LeftPanel(BaseModel):
-    role = models.ForeignKey("Roles", on_delete= models.SET_NULL, null= True)
+    role = models.ForeignKey(Roles, on_delete= models.SET_NULL, null= True)
     title = models.TextField()
     url = models.TextField(null= True)
     priority = models.SmallIntegerField()
     icon = models.TextField(null= True)
     parent = models.ForeignKey("self", on_delete= models.SET_NULL, null= True, related_name= "child")
-
-    objects = models.Manager()
 
     class Meta:
         db_table = "left_panel"

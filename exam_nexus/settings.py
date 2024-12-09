@@ -31,6 +31,7 @@ DEBUG = True
 
 ALLOWED_HOSTS = ['*']
 
+CORS_ALLOWED_ORIGINS= ["https://c851-103-77-186-14.ngrok-free.app"]
 CORS_ALLOW_ALL_ORIGINS = True   # If true, the server will accept all requests.
 CORS_ALLOW_CREDENTIALS = True   # Its value determines whether the server allows cookies in the cross-site HTTP requests.
 

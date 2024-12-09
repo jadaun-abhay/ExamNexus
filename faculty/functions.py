@@ -5,15 +5,15 @@ from faculty.models import ExamSchedules
 from portal.models import Dropdowns
 
 
-def check_schedule(course, department, year, exam_type, exam_details):
+def check_schedule(course, department, year, exam_name, exam_details):
     college_start_time = datetime.time(9, 0, 0)
     college_end_time = datetime.time(17, 0, 0)
     end_time = None
     for detail in exam_details:
         subject_id = detail.get("subject_id")
-        subject_instance = Dropdowns.objects.filter(parent__parent=year, id=subject_id).exclude(status="3").first()
+        subject_instance = Dropdowns.objects.filter(parent__parent= year, id= subject_id).exclude(status="3").first()
         if not subject_instance:
-            response = {"res": {'message': f'Subject with id= {subject_id} is not known'}, "status": 404}
+            response = {"res": {'message': f'Subject with id= {subject_id} is not available'}, "status": 404}
             return response
         exam_date = detail.get("exam_date")
         if not bool(re.match(r"\d{2}/\d{2}/\d{4}", exam_date)):
@@ -25,27 +25,36 @@ def check_schedule(course, department, year, exam_type, exam_details):
             response = {"res": {"message": "Wrong format for start_time must be in \'hh:mm:ss\'"}, "status": 400}
             return response
         start_time = datetime.datetime.strptime(start_time, "%H:%M:%S")
-        exam_duration = float(exam_type.child.first().value)
+        
+
+        exam_duration = float(exam_name.child.first().value)
         duration = datetime.timedelta(hours= exam_duration)
         time_zero = datetime.datetime.strptime('00:00:00', '%H:%M:%S')
         end_time = (start_time - time_zero + duration)
+        if not (college_start_time <= end_time <= college_end_time):
+            response = {"res": {"message": "Exam end timings exceeds college time limits"}, "status": 400}
+            return response
         start_time = start_time.time()
-        maximum_marks = exam_type.child.last()
-        exam_name = exam_type.value
+        if not (college_start_time <= start_time <= college_end_time):
+            response = {"res": {"message": "Examination can only be conducted in academic hours"}, "status": 400}
+            return response
+        maximum_marks = exam_name.child.last()
+        exam_name_text = exam_name.value
         exams = ExamSchedules.objects.filter(course=course, department=department, year=year, exam_status="2")
         for exam in exams:
-            diff_exam = ExamSchedules.objects.filter(course=course, department=department, year=year,
-                                                     exam_status="2").exclude(examination_type= exam_type).order_by(
+            diff_exam = ExamSchedules.objects.filter(course= course, department= department, year= year,
+                                                     exam_status= "2").exclude(examination_type= exam_name).order_by(
                 'exam_date')
             diff = (exam_date + datetime.timedelta(weeks= 2))
-            if diff_exam.exists() and diff_exam.last().exam_date < diff:
-                response = {"res": {"message": "Different exams are too close"}, "status": 409}
-                return response
-            if exam.subject == subject_instance and exam.examination_type == exam_type and exam.exam_date == exam_date:
+            # if diff_exam.exists() and diff_exam.last().exam_date < diff:
+            #     print("HI", diff_exam.values())
+            #     response = {"res": {"message": "Different exams are too close"}, "status": 409}
+            #     return response
+            if exam.subject == subject_instance and exam.examination_type == exam_name and exam.exam_date == exam_date:
                 response = {"res": {"message": "Same subject is scheduled for the examination"}, "status": 400}
                 return response
             if exam.exam_date == exam_date:
-                if exam.start_time <= start_time <= exam.end_time:
+                if (exam.start_time <= start_time <= exam.end_time) or (exam.end_time <= end_time <= exam.end_time):
                     response = {"res": {"message": "Slot is reserved for another exam"}, "status": 400}
                     return response
     return end_time
