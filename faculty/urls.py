@@ -4,7 +4,9 @@ from . import views
 
 urlpatterns = [
     path("", views.index),
-    path("schedule/", views.examination_schedule),
-    path("my-schedule-info/", views.get_my_schedule),
-    path("question-paper/", views.question_paper),
+    path("coe/schedule/", views.examination_schedule__coe),
+    path("schedule/", views.schedule__faculty),
+    path("examination-paper/", views.examination_paper__faculty),
+    path("hod/examination-paper/", views.examination_paper__hod),
+    path("get-years/", views.years_list),
 ]

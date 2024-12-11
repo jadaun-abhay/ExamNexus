@@ -15,7 +15,8 @@ from portal.models import Dropdowns, Roles, LeftPanel, User, RoleMapping
 # Create your views here.
 
 def side_bar(request):
-    available_roles_list = list(Roles.objects.all().values_list("role", flat=True).exclude(status="3"))
+    available_roles_list = list(Roles.objects.all().values_list(
+        "role", flat=True).exclude(status="3"))
     flag = check_role(request.user, available_roles_list)
     if isinstance(flag, dict):
         return JsonResponse(flag["res"], status=flag["status"])
@@ -24,7 +25,8 @@ def side_bar(request):
         data = []
         for user_role_instance in user_role_instance_list:
             my_dict = dict()
-            left_panel_parent_instances = LeftPanel.objects.filter(role=user_role_instance).exclude(status="3")
+            left_panel_parent_instances = LeftPanel.objects.filter(
+                role=user_role_instance).exclude(status="3")
             if not left_panel_parent_instances.exists():
                 res = {"message": "Left panel is not assigned for the requested role"}
                 return JsonResponse(res, status=404)
@@ -54,32 +56,31 @@ def side_bar(request):
         role_id = data.get("role_id")
         if not (title and url and priority and icon and role_id):
             res = {"message": "Information given is not sufficient"}
-            return JsonResponse(res, status= 400)
+            return JsonResponse(res, status=400)
         if not role_id.isnumeric():
             res = {"message": "role_id must be numeric"}
-            return JsonResponse(res, status= 400)
+            return JsonResponse(res, status=400)
         role_id = int(role_id)
         if pid:
             if not pid.isnumeric():
                 res = {"message": "parent_id must be numeric"}
-                return JsonResponse(res, status= 400)
+                return JsonResponse(res, status=400)
             pid = int(pid)
-            parent = LeftPanel.objects.filter(id= pid, parent= None).exclude(status= "3").first()
+            parent = LeftPanel.objects.filter(
+                id=pid, parent=None).exclude(status="3").first()
             if not parent:
                 res = {"message": "Given parent_id is not defined for any parent"}
-                return JsonResponse(res, status= 400)
-            previous = LeftPanel.objects.filter(priority= priority).exclude(status= "3")
+                return JsonResponse(res, status=400)
+            previous = LeftPanel.objects.filter(
+                priority=priority).exclude(status="3")
             if previous.exists():
-                options = LeftPanel.objects.all().exclude(status= "3")
+                options = LeftPanel.objects.all().exclude(status="3")
                 for option in options:
                     pass
                     # option.
 
-
-
-
         pass
-        
+
         # if not (title and url and priority and icon and role_id):
         #     res = {"message": "Information given is not sufficient"}
         #     return JsonResponse(res, status= 400)
@@ -105,33 +106,43 @@ def side_bar(request):
         res = {"message": "Invalid request method"}
         return JsonResponse(res, status=405)
 
+
 def dashboard(request):
-    available_roles_list = list(Roles.objects.all().values_list("role", flat=True).exclude(status="3"))
+    available_roles_list = list(Roles.objects.all().values_list(
+        "role", flat=True).exclude(status="3"))
     flag = check_role(request.user, available_roles_list)
     if isinstance(flag, dict):
         return JsonResponse(flag["res"], status=flag["status"])
     if not request.method == "GET":
         res = {"message": "Invalid request method"}
         return JsonResponse(res, status=405)
-    user_roles = list(request.user.roles.all().exclude(status="3").values_list("role", flat=True))
+    user_roles = list(request.user.roles.all().exclude(
+        status="3").values_list("role", flat=True))
     if "admin" in user_roles:
-        course_base_instance = Dropdowns.objects.filter(value="courses").exclude(status="3").first()
+        course_base_instance = Dropdowns.objects.filter(
+            value="courses").exclude(status="3").first()
         if not course_base_instance:
             courses = 0
         else:
-            courses = len(course_base_instance.child.all().values_list("value", flat=True).exclude(status="3"))
-        employees = len(User.objects.all().exclude(status="3").exclude(roles__role__in=['admin', 'student']))
-        students = len(User.objects.all().filter(roles__role="student").exclude(status="3"))
+            courses = len(course_base_instance.child.all().values_list(
+                "value", flat=True).exclude(status="3"))
+        employees = len(User.objects.all().exclude(
+            status="3").exclude(roles__role__in=['admin', 'student']))
+        students = len(User.objects.all().filter(
+            roles__role="student").exclude(status="3"))
         res = {"message": "success", "roles": list(request.user.roles.all().exclude(status="3").values_list("role")),
                "data": [{"courses": courses, "employees": employees, "students": students}]}
         return JsonResponse(res, status=200)
     elif "coe" in user_roles:
-        course_base_instance = Dropdowns.objects.filter(value="courses").exclude(status="3").first()
+        course_base_instance = Dropdowns.objects.filter(
+            value="courses").exclude(status="3").first()
         if not course_base_instance:
             courses = 0
         else:
-            courses = len(course_base_instance.child.all().values_list("value", flat=True).exclude(status="3"))
-        students = len(User.objects.all().filter(roles__role="student").exclude(status="3"))
+            courses = len(course_base_instance.child.all().values_list(
+                "value", flat=True).exclude(status="3"))
+        students = len(User.objects.all().filter(
+            roles__role="student").exclude(status="3"))
         res = {"message": "success", "roles": list(request.user.roles.all().exclude(status="3").values_list("role")),
                "data": [{"courses": courses, "students": students}]}
         return JsonResponse(res, status=200)
@@ -145,7 +156,8 @@ def dashboard(request):
             department_instance = each.department.id
             year_instance = each.year.id
             subject_instance = each.subject.id
-            print(course_instance, department_instance, year_instance, subject_instance)
+            print(course_instance, department_instance,
+                  year_instance, subject_instance)
             exam = ExamSchedules.objects.filter(course_id=course_instance, department_id=department_instance,
                                                 year_id=year_instance, subject_id=subject_instance,
                                                 exam_status="2").exclude(status="3")
@@ -157,20 +169,31 @@ def dashboard(request):
                 start_time = exam.start_time
                 end_time = exam.end_time
                 year = exam.year.value
-                detail = dict(schedule_id= schedule_id, year=year, exam_name=exam_name, exam_date=exam_date, start_time=start_time,
+                detail = dict(schedule_id=schedule_id, year=year, exam_name=exam_name, exam_date=exam_date, start_time=start_time,
                               end_time=end_time)
                 data.append(detail)
                 print(detail)
             else:
                 message = ""
                 res = {"message": message}
-                return JsonResponse(res, status= 200)
-        message = f"The exam schedule for {exam.examination_type.value} has been uploaded for year- {each.year.value}"
+                return JsonResponse(res, status=200)
+        message = f"The exam schedule for {
+            exam.examination_type.value} has been uploaded for year- {each.year.value}"
         res = {"message": message, "data": data}
         return JsonResponse(res, status=200)
+    elif "hod" in user_roles:
+        hod_info = FacultyInfo.objects.filter(faculty=request.user).first()
+        if not hod_info:
+            res = {"message": "hod_info "}
+        print(hod_info)
+
+        pass
+    elif "student" in user_roles:
+        pass
     else:
         res = {"message": "Invalid option"}
-        return JsonResponse(res, status= 204)
+        return JsonResponse(res, status=204)
+
 
 def login_user(request):
     if request.method == "POST":
@@ -186,14 +209,16 @@ def login_user(request):
         elif not bool(re.match(r"^(?=.*?[A-Z])(?=.*?[a-z])(?=.*?[0-9])(?=.*?[#?!@$%^&*-]).{8,}$", password)):
             res = {"message": "Password is invalid"}
             return JsonResponse(res, status=400)
-        user_instance = User.objects.filter(email=email).exclude(status="3").first()
+        user_instance = User.objects.filter(
+            email=email).exclude(status="3").first()
         if not user_instance:
             res = {"message": "Email is not registered"}
             return JsonResponse(res, status=400)
         user_instance = authenticate(email=email, password=password)
         if user_instance:
             login(request, user_instance)
-            roles_list = list(request.user.roles.all().values_list("role", flat=True).exclude(status="3"))
+            roles_list = list(request.user.roles.all().values_list(
+                "role", flat=True).exclude(status="3"))
             res = {"message": "Login is successful !!!", "roles": roles_list}
             return JsonResponse(res, status=200)
         else:
@@ -201,7 +226,8 @@ def login_user(request):
             return JsonResponse(res, status=400)
     elif request.method == "GET":
         if request.user.is_authenticated:
-            roles = list(request.user.roles.all().values_list("role", flat=True))
+            roles = list(request.user.roles.all(
+            ).values_list("role", flat=True))
             res = {"message": "Login is successful !!!", "roles": roles}
             return JsonResponse(res, status=200)
         else:
@@ -237,7 +263,8 @@ def dropdowns(request):
         if not parent_id:
             course_duration = data.get("duration")
             if not course_duration:
-                res = {"message": "course_duration is required to be specified while creating new course"}
+                res = {
+                    "message": "course_duration is required to be specified while creating new course"}
                 return JsonResponse(res, status=400)
             elif course_duration <= 0:
                 res = {"message": "Invalid value for course_duration"}
@@ -247,39 +274,49 @@ def dropdowns(request):
             res = {"message": "Information given is not sufficient"}
             return JsonResponse(res, status=400)
 
-        parent_instance = Dropdowns.objects.filter(id=parent_id).exclude(status="3")
+        parent_instance = Dropdowns.objects.filter(
+            id=parent_id).exclude(status="3")
         print(parent_instance)
         if parent_instance.exists():
             parent_instance = parent_instance.first()
         if not parent_id and course_duration:
-            base_instance = Dropdowns.objects.filter(value="courses").exclude(status="3")
+            base_instance = Dropdowns.objects.filter(
+                value="courses").exclude(status="3")
             if base_instance.exists():
                 base_instance = base_instance.first()
             else:
-                base_instance = Dropdowns.objects.create(value="courses", status=1)
-            new_course_instance = base_instance.child.filter(value=value).exclude(status="3")
+                base_instance = Dropdowns.objects.create(
+                    value="courses", status=1)
+            new_course_instance = base_instance.child.filter(
+                value=value).exclude(status="3")
             if new_course_instance.exists():
                 res = {"message": "Course already exists"}
                 return JsonResponse(res, status=409)
             else:
-                new_course_instance = base_instance.child.create(value=value, status="1")
-                new_course_instance.child.create(value=course_duration, status="1")
+                new_course_instance = base_instance.child.create(
+                    value=value, status="1")
+                new_course_instance.child.create(
+                    value=course_duration, status="1")
                 res = {"message": "Course has been added"}
                 return JsonResponse(res, status=201)
         elif parent_instance.parent.value == "courses":
             duration = int(parent_instance.child.first().value)
-            department_instance = parent_instance.child.filter(value=value).exclude(status="3").first()
+            department_instance = parent_instance.child.filter(
+                value=value).exclude(status="3").first()
             if department_instance:
                 res = {"message": "Department already exists"}
                 return JsonResponse(res, status=409)
-            department_instance = parent_instance.child.create(value=value, status="1")
+            department_instance = parent_instance.child.create(
+                value=value, status="1")
             for year in range(1, duration + 1):
-                year_instance = department_instance.child.create(value=f"{year}", status="1")
+                year_instance = department_instance.child.create(
+                    value=f"{year}", status="1")
                 year_instance.child.create(value="subjects", status="1")
             res = {"message": "Department has been added"}
             return JsonResponse(res, status=201)
         elif isinstance(value, list):
-            subject_base_instance = parent_instance.child.filter(value="subjects").first()
+            subject_base_instance = parent_instance.child.filter(
+                value="subjects").first()
             for subject in value:
                 if subject_base_instance.child.filter(value=subject).exclude(status="3").exists():
                     res = {"message": f"Subject already exists"}
@@ -296,21 +333,26 @@ def dropdowns(request):
         return JsonResponse(res, status=201)
     elif request.method == "GET":
         parent_id = request.GET.get("pid")
-        parent_instance = Dropdowns.objects.filter(id=parent_id).exclude(status="3")
+        parent_instance = Dropdowns.objects.filter(
+            id=parent_id).exclude(status="3")
         if not parent_instance.exists():
             res = {"message": "No parent exists"}
             return JsonResponse(res, status=404)
         parent_instance = parent_instance.first()
         if parent_instance.parent.value == "courses":
-            children = parent_instance.child.all()[1:].values("id", "parent_id", "value")
+            children = parent_instance.child.all()[1:].values(
+                "id", "parent_id", "value")
             print(list(children))
         elif parent_instance.child.filter(value="subjects").exclude(status="3").exists():
             res = {"message": "success", "sections": [], "subjects": []}
             section = []
-            section_info = list(parent_instance.child.all()[1:].values("id", "parent_id", "value"))
+            section_info = list(parent_instance.child.all()[
+                                1:].values("id", "parent_id", "value"))
             section.append(section_info)
-            subjects_base_instance = parent_instance.child.filter(value="subjects").exclude(status="3").first()
-            subjects = list(subjects_base_instance.child.all().values("id", "parent_id", "value").exclude(status="3"))
+            subjects_base_instance = parent_instance.child.filter(
+                value="subjects").exclude(status="3").first()
+            subjects = list(subjects_base_instance.child.all().values(
+                "id", "parent_id", "value").exclude(status="3"))
             res["sections"] = section_info
             res["subjects"] = subjects
             return JsonResponse(res, status=200)
@@ -332,7 +374,8 @@ def get_courses_list(request):
     if isinstance(flag, dict):
         return JsonResponse(flag["res"], status=flag["status"])
     if request.method == "GET":
-        course_base_instance = Dropdowns.objects.filter(value="courses").exclude(status="3").first()
+        course_base_instance = Dropdowns.objects.filter(
+            value="courses").exclude(status="3").first()
         if not course_base_instance:
             res = {"message": "Currently, there are no courses"}
             return JsonResponse(res, status=404)
@@ -357,13 +400,15 @@ def get_genders_list(request):
     if isinstance(flag, dict):
         return JsonResponse(flag["res"], status=flag["status"])
     if request.method == "GET":
-        gender_list = list(Dropdowns.objects.filter(value="gender", parent=None)[0].child.values("id", "value"))
+        gender_list = list(Dropdowns.objects.filter(
+            value="gender", parent=None)[0].child.values("id", "value"))
         res = {"message": "success", "data": gender_list}
         return JsonResponse(res, status=200)
     elif request.method == "POST":
         data = json.loads(request.body)
         new_gender = data.get("gender")
-        parent = Dropdowns.objects.filter(value="gender").exclude(status="3").first()
+        parent = Dropdowns.objects.filter(
+            value="gender").exclude(status="3").first()
         if parent.child.filter(value=new_gender).exclude(status="3"):
             res = {"message": "Already exists"}
             return JsonResponse(res, status=409)
@@ -406,7 +451,8 @@ def registration(request):
             return JsonResponse(course_instance["res"], status=course_instance["status"])
         for det in detail:
             year_id = det.get("year")
-            year_instance = get_year_instance(course_id, department_id, year_id)
+            year_instance = get_year_instance(
+                course_id, department_id, year_id)
             if isinstance(year_instance, dict):
                 return JsonResponse(year_instance["res"], status=year_instance["status"])
             det["year_id"] = det["year_instance"] = year_instance
@@ -414,21 +460,27 @@ def registration(request):
             subject_id = det.get("subject")
             subject_instance = None
             if reg_type == "faculty":
-                subject_base_instance = year_instance.child.filter(value="subjects").exclude(status="3").first()
-                subject_instance = subject_base_instance.child.filter(id=subject_id).exclude(status="3").first()
+                subject_base_instance = year_instance.child.filter(
+                    value="subjects").exclude(status="3").first()
+                subject_instance = subject_base_instance.child.filter(
+                    id=subject_id).exclude(status="3").first()
                 if not subject_instance:
-                    res = {"message": f"Selected subject with id-{subject_id} is not available"}
+                    res = {
+                        "message": f"Selected subject with id-{subject_id} is not available"}
                     return JsonResponse(res, status=404)
 
                 det["subject_id"] = det["subject_instance"] = subject_instance
             instance_list = []
             for section_id in section:
-                section_instance = year_instance.child.filter(id=section_id).exclude(status="3").first()
+                section_instance = year_instance.child.filter(
+                    id=section_id).exclude(status="3").first()
                 if not section_instance:
-                    res = {"message": "Selected section does not exist under given course, year, department"}
+                    res = {
+                        "message": "Selected section does not exist under given course, year, department"}
                     return JsonResponse(res, status=404)
                 fac_info = FacultyInfo.objects.filter(course=course_instance,
-                                                      department=get_department_instance(course_id, department_id),
+                                                      department=get_department_instance(
+                                                          course_id, department_id),
                                                       year=year_instance, subject=subject_instance,
                                                       section=section_instance).exclude(status="3")
                 if fac_info.exists():
@@ -468,11 +520,13 @@ def registration(request):
         elif not bool(re.match(r'(0|91)?[6-9][0-9]{9}', phone_number)):
             res = {"message": "Phone number is not valid"}
             return JsonResponse(res, status=400)
-        gender_base_instance = Dropdowns.objects.filter(value="gender").exclude(status="3").first()
+        gender_base_instance = Dropdowns.objects.filter(
+            value="gender").exclude(status="3").first()
         if not gender_base_instance:
             res = {"message": "Genders are not defined by the server"}
             return JsonResponse(res, status=404)
-        gender_instance = gender_base_instance.child.filter(id=gender_id).exclude(status="3").first()
+        gender_instance = gender_base_instance.child.filter(
+            id=gender_id).exclude(status="3").first()
         if not gender_instance:
             res = {"message": "Gender does not exists"}
             return JsonResponse(res, status=404)
@@ -487,13 +541,17 @@ def registration(request):
             faculty_role = Roles.objects.get(role="Faculty")
             student_role = Roles.objects.get(role="Student")
             if reg_type == "faculty":
-                RoleMapping.objects.create(user=user_obj, role=faculty_role, status="1")
-                response = create_faculty_info_details(course_id, department_id, detail, faculty_id=user_obj.id)
+                RoleMapping.objects.create(
+                    user=user_obj, role=faculty_role, status="1")
+                response = create_faculty_info_details(
+                    course_id, department_id, detail, faculty_id=user_obj.id)
                 if isinstance(response, dict):
                     return JsonResponse(response["res"], status=response["status"])
             elif reg_type == "student":
-                RoleMapping.objects.create(user=user_obj, role=student_role, status="1")
-                response = create_student_info_details(course_id, department_id, detail, student_id=user_obj.id)
+                RoleMapping.objects.create(
+                    user=user_obj, role=student_role, status="1")
+                response = create_student_info_details(
+                    course_id, department_id, detail, student_id=user_obj.id)
                 if isinstance(response, dict):
                     return JsonResponse(response["res"], status=response["status"])
             else:
@@ -517,7 +575,8 @@ def records(request):
         choice = request.GET.get("choice")
         if choice == "student":
             student_info_list = []
-            users_list = User.objects.filter(roles__role="student").exclude(status="3")
+            users_list = User.objects.filter(
+                roles__role="student").exclude(status="3")
             for student in users_list:
                 student_info = student.student_info.first()
                 info = get_auth_table_data(student)
@@ -531,12 +590,14 @@ def records(request):
         elif choice == "faculty":
             faculty_info_list = list()
             faculty_dict = coe_dict = hod_dict = dict()
-            users_list = User.objects.all().exclude(status="3").exclude(roles__role__in=["student", "admin"])
+            users_list = User.objects.all().exclude(status="3").exclude(
+                roles__role__in=["student", "admin"])
             faculty_list = list()
             for faculty in users_list:
                 coe_list = hod_list = list()
                 faculty_info = faculty.faculty_info.all()
-                roles = list(faculty.roles.all().values_list("role", flat=True))
+                roles = list(
+                    faculty.roles.all().values_list("role", flat=True))
                 if "coe" in roles:
                     coe_dict = {"coe": []}
                     coe_info = get_auth_table_data(faculty)
@@ -546,7 +607,8 @@ def records(request):
                 if "hod" == roles[0]:
                     hod_info = get_auth_table_data(faculty)
                     print(hod_info)
-                    hod_info.update({"course": faculty_info.first().course.id, "department": faculty_info.first().department.id})
+                    hod_info.update({"course": faculty_info.first(
+                    ).course.id, "department": faculty_info.first().department.id})
                     hod_list.append(hod_info)
                     hod_dict.update({"hod": hod_list})
                     faculty_info_list.append(hod_dict)
@@ -562,7 +624,8 @@ def records(request):
             res = {"message": "success", "data": faculty_info_list}
             return JsonResponse(res, status=200)
         elif choice == "courses":
-            course_base_instance = Dropdowns.objects.filter(value="courses").exclude(status="3").first()
+            course_base_instance = Dropdowns.objects.filter(
+                value="courses").exclude(status="3").first()
             if not course_base_instance:
                 res = {"message": "Currently there are no courses available"}
                 return JsonResponse(res, status=404)
@@ -581,11 +644,13 @@ def records(request):
                     department_id = department.id
                     department_name = department.value
                     years = department.child.all().exclude(status="3")
-                    department_dict = {"department_id": department_id, "department_name": department_name, "years": []}
+                    department_dict = {"department_id": department_id,
+                                       "department_name": department_name, "years": []}
                     for year in years:
                         year_id = year.id
                         year_name = year.value
-                        sections = list(year.child.all().exclude(status="3")[1:].values_list("value", flat=True))
+                        sections = list(year.child.all().exclude(status="3")[
+                                        1:].values_list("value", flat=True))
                         subject_base_instance = year.child.first()
                         subjects_list = list(
                             subject_base_instance.child.all().exclude(status="3").values_list("value", flat=True))
@@ -608,9 +673,9 @@ def examination_types(request):
     if isinstance(flag, dict):
         return JsonResponse(flag["res"], status=flag["status"])
     if request.method == "GET":
-        examinations = Dropdowns.objects.filter(parent__value="exam_name").all().exclude(status="3").values("id",
-                                                                                                            "parent_id",
-                                                                                                            "value")
+        examinations = Dropdowns.objects.filter(parent__value="examinations").all().exclude(status="3").values("id",
+                                                                                                               "parent_id",
+                                                                                                               "value")
         if not examinations.exists():
             res = {"message": "Admin has not defined exam_names yet."}
             return JsonResponse(res, status=404)
@@ -626,7 +691,8 @@ def examination_types(request):
         if not (exam_name and exam_duration and maximum_marks and total_questions):
             res = {"message": "Information given is not sufficient"}
             return JsonResponse(res, status=400)
-        parent = Dropdowns.objects.filter(value="exam_type").exclude(status="3").first()
+        parent = Dropdowns.objects.filter(
+            value="exam_type").exclude(status="3").first()
         if not parent:
             parent = Dropdowns.objects.create(value="exam_type", status="1")
         if parent.child.filter(value=exam_name).exclude(status="3").exists():
@@ -635,48 +701,55 @@ def examination_types(request):
         exam_type = parent.child.create(value=exam_name, status="1")
         exam_type.child.create(value=exam_duration, status="1")
         exam_type.child.create(value=maximum_marks, status="1")
-        exam_type.child.create(value= total_questions, status= "1")
+        exam_type.child.create(value=total_questions, status="1")
         res = {"message": "Examination type is successfully added"}
         return JsonResponse(res, status=201)
     else:
         res = {"message": "Invalid request method"}
         return JsonResponse(res, status=405)
 
+
 def get_my_profile(request):
-    available_roles_list = list(Roles.objects.all().values_list("role", flat=True).exclude(status="3"))
+    available_roles_list = list(Roles.objects.all().values_list(
+        "role", flat=True).exclude(status="3"))
     flag = check_role(request.user, available_roles_list)
     if isinstance(flag, dict):
-        return JsonResponse(flag["res"], status= flag["status"])
+        return JsonResponse(flag["res"], status=flag["status"])
     email = request.user.email
-    user = User.objects.filter(email= email).exclude(status= "3").values("id", "first_name", "middle_name", "email",
-                                                                         "last_name", "phone_number", "dob",
-                                                                         "gender__value")
+    user = User.objects.filter(email=email).exclude(status="3").values("id", "first_name", "middle_name", "email",
+                                                                       "last_name", "phone_number", "dob",
+                                                                       "gender__value")
     user = user[0]
     roles = list(request.user.roles.all().values_list("role", flat=True))
-    user_roles = list(request.user.roles.all().exclude(status="3").values_list("role", flat=True))
+    user_roles = list(request.user.roles.all().exclude(
+        status="3").values_list("role", flat=True))
     if len(roles) == 1:
         roles = roles[0]
     user.update({"roles": roles.upper()})
     if "admin" in user_roles:
         res = {"message": "success", "data": user}
-        return JsonResponse(res, status= 200)
+        return JsonResponse(res, status=200)
         pass
     elif "coe" in user_roles:
         res = {"message": "success", "data": user}
-        return JsonResponse(res, status= 200)
+        return JsonResponse(res, status=200)
     elif "hod" in user_roles:
         hod_info = FacultyInfo.objects.filter(faculty=request.user)
         if not hod_info.exists():
             res = {"message": "Academic info of hod is not defined"}
-            return JsonResponse(res, status= 404)
+            return JsonResponse(res, status=404)
         hod_info = hod_info.first()
-        academic_info = dict(course= hod_info.course.value, department= hod_info.department.value)
+        academic_info = dict(course=hod_info.course.value,
+                             department=hod_info.department.value)
         user.update({"academic_info": academic_info})
         res = {"message": "success", "data": user}
-        return JsonResponse(res, status= 200)
+        return JsonResponse(res, status=200)
     elif "faculty" in user_roles:
-        fac_info = FacultyInfo.objects.filter(faculty= request.user)
+        fac_info = FacultyInfo.objects.filter(faculty=request.user)
         user.update({"academic_info": get_faculty_info(fac_info)})
         res = {"message": "success", "data": user}
         print(res)
-        return JsonResponse(res, status= 200)
+        return JsonResponse(res, status=200)
+    elif "student" in user_roles:
+        stu_info = StudentInfo.objects.filter(student=request.user).values(
+            "course__value", "department__value", "year__value", "section__value")

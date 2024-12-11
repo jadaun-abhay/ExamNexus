@@ -31,6 +31,7 @@ class ExamSchedules(BaseModel):
     start_time = models.TimeField()
     end_time = models.TimeField()
     exam_status = models.CharField(max_length= 2, choices= EXAM_HELD_STATUS)
+    faculty = models.ForeignKey(User, on_delete= models.SET_NULL, related_name= "selected_name", null= True)
 
     class Meta:
         db_table = "exam_schedules"
