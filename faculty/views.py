@@ -1,6 +1,5 @@
 import datetime
 import json
-import re
 
 from django.http import JsonResponse
 
@@ -8,8 +7,10 @@ from faculty.functions import check_schedule
 from faculty.models import ExamSchedules, FacultyInfo, QuestionPaper
 from portal.functions import check_role, get_course_instance, get_department_instance, get_year_instance, \
     get_subject_instance
-from portal.models import Dropdowns
-from portal.views import examination_types
+from portal.models import Dropdowns, BaseModel
+
+Status= BaseModel.Status
+ExamStatus = ExamSchedules.ExamStatus
 
 
 # Create your views here.
@@ -32,12 +33,11 @@ def examination_schedule__coe(request):
         exam_details = data.get("exam_details")
         if not (course_id and department_id and year_id and exam_id and exam_details):
             res = {"message": "Information given is not sufficient"}
-            return JsonResponse(res, status=400)
-        examination_instance = Dropdowns.objects.filter(
-            parent__value="examinations", id=exam_id).exclude(status="3").first()
+            return JsonResponse(res, status= 400)
+        examination_instance = Dropdowns.objects.filter(parent__value= "examinations", id= exam_id).exclude(status= Status.DELETED).first()
         if not examination_instance:
             res = {"message": "Exam name is not defined"}
-            return JsonResponse(res, status=400)
+            return JsonResponse(res, status= 400)
         course_instance = get_course_instance(course_id)
         if isinstance(course_instance, dict):
             return JsonResponse(course_instance["res"], status=course_instance["status"])
@@ -47,8 +47,7 @@ def examination_schedule__coe(request):
         year_instance = get_year_instance(course_id, department_id, year_id)
         if isinstance(year_instance, dict):
             return JsonResponse(year_instance["res"], status=year_instance["status"])
-        flag = check_schedule(
-            course_instance, department_instance, year_instance, examination_instance, exam_details)
+        flag = check_schedule(course_instance, department_instance, year_instance, examination_instance, exam_details)
         if isinstance(flag, dict):
             return JsonResponse(flag["res"], status=flag["status"])
         zero_time = datetime.datetime.min
@@ -59,11 +58,11 @@ def examination_schedule__coe(request):
                 course_id, department_id, year_id, subject_id)
             exam_date = detail.get("exam_date")
             exam_date = datetime.datetime.strptime(exam_date, "%d/%m/%Y")
-            exam = ExamSchedules.objects.create(status="1", course=course_instance, department=department_instance,
-                                                year=year_instance, examination_type=examination_instance,
-                                                subject=subject_instance, exam_date=exam_date,
-                                                start_time=detail.get("start_time"), end_time=flag,
-                                                exam_status="2")
+            exam = ExamSchedules.objects.create(status= Status.CREATED, course= course_instance, department= department_instance,
+                                                year= year_instance, examination_type= examination_instance,
+                                                subject= subject_instance, exam_date= exam_date,
+                                                start_time= detail.get("start_time"), end_time= flag,
+                                                exam_status= ExamStatus.PENDING)
         res = {"message": "success", "data": "Schedule/s has been added"}
         return JsonResponse(res, status=201)
     elif request.method == "GET":

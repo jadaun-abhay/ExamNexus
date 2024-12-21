@@ -18,19 +18,19 @@ class FacultyInfo(BaseModel):
         db_table = "faculty_info"
 
 class ExamSchedules(BaseModel):
-    EXAM_HELD_STATUS = {
-        "1": "held",
-        "2": "pending",
-    }
+    class ExamStatus(models.IntegerChoices):
+        HELD = 1
+        PENDING = 2
+
     course = models.ForeignKey(Dropdowns, on_delete= models.SET_NULL, related_name= "scheduled_course", null= True)
     department = models.ForeignKey(Dropdowns, on_delete= models.SET_NULL, related_name= "scheduled_department", null= True)
     year = models.ForeignKey(Dropdowns, on_delete= models.SET_NULL, related_name= "scheduled_year", null= True)
-    examination_type = models.ForeignKey(Dropdowns, on_delete= models.SET_NULL, related_name= "exam_type", null= True)
+    examination = models.ForeignKey(Dropdowns, on_delete= models.SET_NULL, related_name= "exam_type", null= True)
     subject = models.ForeignKey(Dropdowns, on_delete= models.SET_NULL, related_name= "scheduled_subject", null= True)
     exam_date = models.DateField()
     start_time = models.TimeField()
     end_time = models.TimeField()
-    exam_status = models.CharField(max_length= 2, choices= EXAM_HELD_STATUS)
+    exam_status = models.IntegerField(choices= ExamStatus)
     faculty = models.ForeignKey(User, on_delete= models.SET_NULL, related_name= "selected_name", null= True)
 
     class Meta:

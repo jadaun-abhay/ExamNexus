@@ -1,4 +1,5 @@
 import datetime
+import json
 
 from django.http import JsonResponse
 from django.shortcuts import render
@@ -100,7 +101,8 @@ def examination(request):
         data.append(my_dict)
         res = {"message": "success", "data": data}
         return JsonResponse(res, status=200)
-    # elif
+    elif request.method == "POST":
+        data = json.loads(request.body)
     else:
         res = {"message": "Invalid request method"}
         return JsonResponse(res, status=405)

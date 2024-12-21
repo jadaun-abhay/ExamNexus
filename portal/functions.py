@@ -1,22 +1,66 @@
-from django.http import JsonResponse
+from django.db.models import Q
+from django.template.context_processors import request
 
-from faculty.models import FacultyInfo
-from portal.models import Dropdowns, User
+from faculty.models import FacultyInfo, ExamSchedules
+from portal.models import Dropdowns, User, LeftPanel
+from portal.models import BaseModel
 from student.models import StudentInfo
 
+Status = BaseModel.Status
+ExamStatus = ExamSchedules.ExamStatus
 
-def check_role(user_instance, allowed_roles_list):
-    if not user_instance.is_authenticated:
+def check_role(user, allowed_roles_list):
+    if not user.is_authenticated:
         response = {"res": {"message": "Login is required !!!"}, "status": 401}
         return response
-    user_roles_list = list(user_instance.roles.all().values_list("role", flat= True))
-    if user_roles_list[0] in allowed_roles_list:
+    user_roles_list = list(user.roles.values_list("role", flat= True).order_by("role"))
+    user_roles_list = [role.lower() for role in user_roles_list]
+    allowed_roles_list = sorted(allowed_roles_list)
+    allowed_roles_list = [role.lower() for role in allowed_roles_list]
+    intersection_set = set(user_roles_list).intersection(set(allowed_roles_list))
+    if intersection_set:
         return True
-    for role in allowed_roles_list:
-        if not role in user_roles_list:
-            response = {"res": {"message": "You are not authorised"}, "status": 403}
-            return response
-    return True
+    response = {"res": {"message": "You are not authorised !!!"}, "status": 403}
+    return response
+
+def get_admin_dashboard_data():
+    courses = len(Dropdowns.objects.filter(parent__value= "courses").exclude(status= Status.DELETED))
+    employees = len(User.objects.exclude(status= Status.DELETED).exclude(roles__role__in= ["admin", "student"]))
+    students = len(User.objects.filter(roles__role= "student").exclude(status= Status.DELETED))
+    data = [dict(courses= courses, employees= employees, students= students)]
+    return dict
+
+def get_coe_dashboard_data():
+    courses = len(Dropdowns.objects.filter(parent__value="courses").exclude(status=Status.DELETED))
+    employees = len(User.objects.exclude(status=Status.DELETED).exclude(roles__role__in=["admin", "student"]))
+    students = len(User.objects.filter(roles__role="student").exclude(status=Status.DELETED))
+    data = [dict(courses=courses, employees=employees, students=students)]
+    return data
+
+def get_hod_dashboard_data(user):
+    hod_info = user.faculty_info.values("course__value", "department__value").exculde(status= Status.DELETED).first()
+    course = hod_info.get("course__value")
+    department = hod_info.get("department__value")
+    employees = len(User.objects.filter(faculty_info__course__value= course, faculty_info__department__value= department).exclude(status= Status.DELETED).values("email").distinct())
+    students = len(User.objects.filter(student_info__course__value= course, student_info__department__value= department).exclude(status= Status.DELETED).values("email").distict())
+    data = [dict(course= course, department= department, employees= employees, students= students)]
+    return data
+
+def get_faculty_dashboard_data(user):
+    faculty_info = user.faculty_info.values("course__value", "department__value", "year__value", "subject__value", "section__value").exclude(status= Status.DELETED)
+    faculty_dashboard_info = list()
+    section_data = list()
+    for fac_info in faculty_info:
+        total_students = len(User.objects.filter(roles__role= "student", student_info__course__value= fac_info.get("course__value"), student_info__department__value= fac_info.get("department__value"), student_info__year__value= fac_info.get("year__value"), student_info__section__value= fac_info.get("section__value")).exclude(status= Status.DELETED))
+        section_info = dict(year= fac_info.get("year__value"), section= fac_info.get("section__value"), total_students= total_students)
+        section_data.append(section_info)
+        exams = list(ExamSchedules.objects.filter(course__value= fac_info.get("course__value"), department__value= fac_info.get("department__value"), year__value= fac_info.get("year__value"), subject__value= fac_info.get("subject__value"), exam_status= ExamStatus.PENDING).exclude(status= Status.DELETED).exclude(exam__faculty= user).values("id", "year__id", "year__value", "subject__id", "subject__value", "examination__id", "examination__value"))
+        if exams:
+            faculty_dashboard_info.append(exams)
+    return dict(faculty_dashboard_info= faculty_dashboard_info, section_data= section_data)
+
+def get_student_dashboard_data(user):
+    pass
 
 def get_course_instance(course_id):
     course_instance = Dropdowns.objects.filter(id= course_id).exclude(status= "3").first()

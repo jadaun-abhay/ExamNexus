@@ -2,34 +2,28 @@ import datetime
 import re
 
 from faculty.models import ExamSchedules
-from portal.models import Dropdowns
+from portal.models import Dropdowns, BaseModel
 
+
+Status= BaseModel.Status
 
 def check_schedule(course, department, year, examination, exam_details):
-    college_start_time = Dropdowns.objects.filter(
-        parent__value="college_start_time").exclude(status="3").first()
+    college_start_time = Dropdowns.objects.filter(parent__value= "college_start_time").exclude(status= Status.DELETED).first()
     if not college_start_time:
-        response = {
-            "res": {"message": "College starting time is not defined"}, "status": 400}
+        response = {"res": {"message": "College starting time is not defined"}, "status": 400}
         return response
-    college_start_time = datetime.datetime.strptime(
-        college_start_time, "%H:%M:%S").time()
-    college_end_time = Dropdowns.objects.filter(
-        parent__value="college_end_time").exclude(status="3").first()
+    college_start_time = datetime.datetime.strptime(college_start_time, "%H:%M:%S").time()
+    college_end_time = Dropdowns.objects.filter(parent__value="college_end_time").exclude(status= Status.DELETED).first()
     if not college_end_time:
-        response = {
-            "res": {"message": "College ending time is not defined"}, "status": 400}
+        response = {"res": {"message": "College ending time is not defined"}, "status": 400}
         return response
-    college_end_time = datetime.datetime.strptime(
-        college_end_time, "%H:%M:%S").time()
+    college_end_time = datetime.datetime.strptime(college_end_time, "%H:%M:%S").time()
     end_time = None
     for detail in exam_details:
         subject_id = detail.get("subject_id")
-        subject_instance = Dropdowns.objects.filter(
-            parent__parent=year, id=subject_id).exclude(status="3").first()
+        subject_instance = Dropdowns.objects.filter(parent__parent= year, id=subject_id).exclude(status= Status.DELETED).first()
         if not subject_instance:
-            response = {"res": {'message': f'Subject with id= {
-                subject_id} is not available'}, "status": 404}
+            response = {"res": {'message': f'Subject with id= {subject_id} is not available'}, "status": 404}
             return response
         exam_date = detail.get("exam_date")
         if not bool(re.match(r"\d{2}/\d{2}/\d{4}", exam_date)):
