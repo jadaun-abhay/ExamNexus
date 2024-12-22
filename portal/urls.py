@@ -12,6 +12,6 @@ urlpatterns = [
     path("dropdowns/customization/", views.dropdowns_customisation),
     path("records/", views.records),
     path("dashboard/", views.dashboard),
-    path("exam-types/", views.examination_types),
+    path("exam_pattern/", views.examination_customization),
     path("profile/", views.profile),
 ]

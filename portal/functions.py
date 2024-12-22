@@ -134,41 +134,22 @@ def get_subject_instance(course_id, department_id, year_id, subject_id):
         return subject
 
 def create_faculty_info_details(course_id, department_id, detail, faculty_id):
-    course_instance = get_course_instance(course_id)
-    if isinstance(course_instance, dict):
-        return course_instance
-    department_instance = get_department_instance(course_id, department_id)
-    if isinstance(department_instance, dict):
-        return department_instance
     faculty_instance = User.objects.filter(id= faculty_id).exclude(status= "3").first()
     if not faculty_instance:
         response = {"res": {"message": "Faculty does not exists"}, "status": 404}
         return response
-    for det in detail:
-        year_instance = det.get("year_instance")
-        year_id = year_instance.id
-        section_instances = det.get("section_instance_list")
-        subject_instance = det.get("subject_instance")
-        for instance in section_instances:
-            FacultyInfo.objects.create(course= course_instance, department= department_instance, faculty= faculty_instance, status= "1", year= year_instance, section= instance, subject= subject_instance)
+    faculty_info_list = []
+    [[faculty_info_list.append(FacultyInfo(course_id= course_id, department_id= department_id, faculty= faculty_instance, status= Status.CREATED, year_id= each.get("year_id"), section_id= section_id, subject_id= each.get("subject_id"))) for section_id in each.get("section")] for each in detail]
+    FacultyInfo.objects.bulk_create(faculty_info_list)
     return "done"
 
 def create_student_info_details(course_id, department_id, detail, student_id):
-    course_instance = get_course_instance(course_id)
-    if isinstance(course_instance, dict):
-        return course_instance
-    department_instance = get_department_instance(course_id, department_id)
-    if isinstance(department_instance, dict):
-        return department_instance
     student = User.objects.filter(id= student_id).exclude(status= "3").first()
     if not student:
         response = {"res": {"message": "Student does not exists"}, "status": 404}
         return response
-    for det in detail:
-        year_instance = det.get("year_instance")
-        year_id = year_instance.id
-        section_instance = det.get("section_instance_list")[0]
-        StudentInfo.objects.create(course= course_instance, department= department_instance, student= student, year= year_instance, section= section_instance, status= "1")
+    detail = detail[0]
+    StudentInfo.objects.create(course_id= course_id, department_id= department_id, student= student_id, year_id= detail.get("year"), section= detail.get("section"), status= Status.CREATED)
     return "done"
 
 def get_auth_table_data(user_obj):

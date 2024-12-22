@@ -17,6 +17,18 @@ class FacultyInfo(BaseModel):
     class Meta:
         db_table = "faculty_info"
 
+class QuestionPaperPattern(BaseModel):
+    course = models.ForeignKey(Dropdowns, related_name= "paper_pattern_course", on_delete= models.SET_NULL, null= True)
+    department = models.ForeignKey(Dropdowns, related_name= "paper_pattern_department", on_delete= models.SET_NULL, null= True)
+    year = models.ForeignKey(Dropdowns, related_name= "paper_pattern_year", on_delete= models.SET_NULL, null= True)
+    examination = models.ForeignKey(Dropdowns, related_name= "paper_pattern_examination", on_delete= models.SET_NULL, null= True)
+    section = models.CharField(max_length= 1)
+    total_questions = models.SmallIntegerField()
+    each_question_marks = models.SmallIntegerField()
+
+    class Meta:
+        db_table= "paper_patten"
+
 class ExamSchedules(BaseModel):
     class ExamStatus(models.IntegerChoices):
         HELD = 1
