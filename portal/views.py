@@ -3,13 +3,15 @@ import json
 import re
 
 from django.contrib.auth import authenticate, login, logout
+from django.db.models import F
+from django.db.models.functions import JSONObject
 from django.http import JsonResponse
 from django.template.defaultfilters import default_if_none
 
 from faculty.models import FacultyInfo, QuestionPaperPattern
 from portal.functions import check_role, get_year_instance, get_course_instance, \
     create_faculty_info_details, create_student_info_details, get_auth_table_data, get_faculty_info, \
-    get_department_instance, get_admin_dashboard_data, get_coe_dashboard_data, get_hod_dashboard_data, \
+    get_admin_dashboard_data, get_coe_dashboard_data, get_hod_dashboard_data, \
     get_faculty_dashboard_data, get_student_dashboard_data
 from portal.models import Dropdowns, Roles, LeftPanel, User, RoleMapping, BaseModel
 
@@ -587,29 +589,13 @@ def examination_customization(request):
         return JsonResponse(res, status= 405)
 
 
-def profile(request):
+def user_profile(request):
     available_roles_list = list(Roles.objects.all().values_list("role", flat=True).exclude(status= Status.DELETED))
     flag = check_role(request.user, available_roles_list)
     if isinstance(flag, dict):
         return JsonResponse(flag["res"], status=flag["status"])
-    user_roles = list(request.user.roles.exclude(status= Status.DELETED).values_list("role", flat=True).order_by("id"))
-    if "admin" in user_roles:
-        admin_info = list(User.objects.filter(email= request.user.email).exclude(status= Status.DELETED).values("id", "first_name", "middle_name", "last_name", "email", "phone_number", "dob", "gender__value"))
-        res = {"message": "success", "data": admin_info}
-        return JsonResponse(res, status= 200)
-    elif "coe" in user_roles:
-        coe_info = list(User.objects.filter(email= request.user.email).exclude(status= Status.DELETED).values("id", "first_name", "middle_name", "last_name", "email", "phone_number", "dob", "gender__value"))
-        res = {"message": "success", "data": coe_info}
-        return JsonResponse(res, status= 200)
-    elif "hod" in user_roles:
-        hod_info = list(User.objects.filter(email= request.user.email).exclude(status= Status.DELETED).values("id", "first_name", "middle_name", "last_name", "email", "phone_number", "dob", "gender__value", "faculty_info__course__value", "faculty_info__department__value"))
-        res = {"message": "success", "data": hod_info}
-        return JsonResponse(res, status= 200)
-    elif "faculty" in user_roles:
-        faculty_info = list(User.objects.filter(email= request.user.email).exclude(status= Status.DELETED).values("id", "first_name", "middle_name", "last_name", "email", "phone_number", "dob", "gender__value", "faculty_info__course__value", "faculty_info__department__value", "faculty_info__year__value", "faculty_info__section__value", "faculty_info__subject__value"))
-        res = {"message": "success", "data": faculty_info}
-        return JsonResponse(res, status= 200)
-    elif "student" in user_roles:
-        student_info = list(User.objects.filter(email= request.user.email).exclude(status= Status.DELETED).values("id", "first_name", "middle_name", "last_name", "email", "phone_number", "dob", "gender__value", "student_info__course__value", "student_info__department__value", "student_info__year__value", "student_info__section__value"))
-        res = {"message": "success", "data": student_info}
-        return JsonResponse(res, status= 200)
+    user_roles = list(request.user.roles.exclude(status= Status.DELETED).values_list("role", flat=True))
+    data = list()
+    data = User.objects.filter(roles__role__in= user_roles).exclude(status= Status.DELETED).exclude(rolemapping__status= Status.DELETED).annotate(more_info= JSONObject(role= F("roles__role"), info= JSONObject(course= F("faculty_info__course__value"), department= F("faculty_info__department__value"), year= F("faculty_info__year__value"), section= F("faculty_info__section__value")))).values("email", "id", "first_name", "middle_name", "last_name", "phone_number", "dob", more_info= F("more_info"))
+    res = {"message": "success", "data": list(data)}
+    return JsonResponse(res, status= 200)

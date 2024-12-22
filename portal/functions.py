@@ -153,7 +153,7 @@ def create_student_info_details(course_id, department_id, detail, student_id):
     return "done"
 
 def get_auth_table_data(user_obj):
-    my_dict = {"full_name": user_obj.get_full_name(), "email": user_obj.email, "phone_number": user_obj.phone_number, "dob": user_obj.dob, "gender": user_obj.gender.value}
+    my_dict = {"first_name": user_obj.first_name, "middle_name": user_obj.middle_name, "last_name": user_obj.last_name, "email": user_obj.email, "phone_number": user_obj.phone_number, "dob": user_obj.dob, "gender": user_obj.gender.value}
     return my_dict
 
 def get_faculty_info(faculty_info):
@@ -172,3 +172,7 @@ def get_faculty_info(faculty_info):
         if len(roles) > 1:
             my_dict["roles"] = roles
     return my_dict
+
+
+
+
